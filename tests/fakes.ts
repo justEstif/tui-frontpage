@@ -60,6 +60,9 @@ export function fakeStore(opts?: {
     async story(id) {
       return state.stories.find((s) => s.id === id) ?? null;
     },
+    async sources() {
+      return state.sources;
+    },
     ...storyApi(state.stories),
     ...sourceApi(state.sources),
     async appendEvent(e) {
