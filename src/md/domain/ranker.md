@@ -9,6 +9,8 @@ IO of its own.
 Events from the ledger (`src/md/data/store.md`):
 
 - `rate` — explicit rating; `target` holds a numeric value (+2 to -2).
+  The event's terms come from the rated story (`storyId` → title + text), so a
+  rating is signal about that story's words, same as keep/skip.
 - `keep` — story kept for reading. Target: story id.
 - `skip` — story dismissed. Target: story id.
 - `read` — time spent; `target` holds read_ms.
@@ -22,7 +24,8 @@ Two signals, both derived at read time from `events`:
    sentiment (kept, read>30s, rated >0) push their terms up; negative
    sentiment (skipped, rated <0) pushes down. Term weight =
    `Σ(sentiment)` per term, normalized to [-2, +2], decayed by recency
-   (half-life 14 days against `Clock.now()`).
+   (half-life 14 days against `Clock.now()`). Rate events tokenize the rated
+   story's title + text (resolved via `storyId`), not the numeric target.
 2. **Interest per source** — `sources.kept - sources.skipped`, normalized to
    [-2, +2]. A feed you keep from outranks a feed you skip from.
 
@@ -63,17 +66,22 @@ rust +0.8 (3 kept), crypto -1.2 (2 skipped)
 Rules:
 
 - Weights shown to one decimal, sign always visible.
-- `(n kept)` / `(n skipped)` counts come from the ledger events backing the
-  weight, not from the normalized score.
+- `(n kept)` / `(n skipped)` / `(n rated)` counts come from the ledger events
+  backing the weight, not from the normalized score. Kind is `rated` when rate
+  events dominate the fragment, else `kept`/`skipped` by majority.
 - A story with no signal history returns `no signal yet`.
 - Highest-|weight| fragments first, positive before negative on ties.
 
 ## Cold start
 
 No fit number, no percentage, no score is displayed until the ledger has at
-least 10 sentiment-bearing events. Before that the queue is chronological
+fewer than 5 sentiment-bearing events. Before that the queue is chronological
 (newest first) and receipts read `no signal yet`. The TUI shows the count
-remaining ("5 ratings until ranking") instead of a fake fit %. After the
+remaining ("N ratings until ranking") instead of a fake fit %.
+
+Threshold is 5, matching the onboarding promise ("rate 5 stories, see the
+queue reorder"). Rates contribute the rated story's terms with the rating's
+polarity, so 5 ratings is genuine signal, not just counter movement. After the
 threshold the ranking is live but receipts still never show a percentage —
 v1 shows reasons, not confidence.
 

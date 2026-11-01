@@ -5,7 +5,10 @@ import type { Clock, LedgerEvent, Source, Story } from "./ports";
 
 export type { Clock, LedgerEvent, Source, Story, Store } from "./ports";
 
-const COLD_START_THRESHOLD = 10;
+// Aligns with onboarding: ranking goes live after 5 sentiment events
+// ("rate 5 stories, see the queue reorder"). Rates contribute the rated
+// story's terms, so 5 ratings is enough real signal.
+const COLD_START_THRESHOLD = 5;
 const HALF_LIFE_DAYS = 14;
 const TERM_CLAMP = 2;
 const MAX_RECEIPT_FRAGMENTS = 3;
@@ -42,13 +45,31 @@ function decayHalfLife(sentiment: number, ageMs: number): number {
   return sentiment / Math.pow(2, halfLives);
 }
 
-/** Normalized to [-2, +2], recency-decayed. */
-export function termWeights(events: LedgerEvent[], nowMs: number): Map<string, number> {
+/** Terms carrying signal for an event. `rate` targets the rated story's words. */
+function eventTerms(e: LedgerEvent, byId: Map<string, Story>): string {
+  if (e.kind === "rate") {
+    const story = e.storyId === null ? undefined : byId.get(e.storyId);
+    return story === undefined ? "" : `${story.title} ${story.text ?? ""}`;
+  }
+  return e.target;
+}
+
+function byStoryId(stories: Story[]): Map<string, Story> {
+  return new Map(stories.map((s) => [s.id, s]));
+}
+
+/** Normalized to [-2, +2], recency-decayed. Rate events carry the rated story's terms. */
+export function termWeights(
+  events: LedgerEvent[],
+  nowMs: number,
+  stories: Story[] = [],
+): Map<string, number> {
+  const ids = byStoryId(stories);
   const raw = new Map<string, number>();
   for (const e of events) {
     const s = sentiment(e);
     if (s === 0) continue;
-    for (const term of tokenize(e.target)) {
+    for (const term of tokenize(eventTerms(e, ids))) {
       raw.set(term, (raw.get(term) ?? 0) + decayHalfLife(s, nowMs - e.ts));
     }
   }
@@ -98,24 +119,42 @@ export function score(
   );
 }
 
-/**
- * One-line receipt: `<term> +1.5 (2 kept)` fragments, ", "-joined, max 3.
- * No signal history → "no signal yet".
- */
-export function whyReceipt(story: Story, events: LedgerEvent[], nowMs: number): string {
-  // Fragments come from the ledger events backing the story's terms.
-  const perTerm = new Map<string, { weight: number; kept: number; skipped: number }>();
+type TermTally = { weight: number; kept: number; skipped: number; rated: number };
+
+/** Raw (pre-normalization) weight + event counts per term across the ledger. */
+function termTallies(
+  events: LedgerEvent[],
+  nowMs: number,
+  ids: Map<string, Story>,
+): Map<string, TermTally> {
+  const perTerm = new Map<string, TermTally>();
   for (const e of events) {
     const s = sentiment(e);
     if (s === 0) continue;
-    for (const term of tokenize(e.target)) {
-      const cur = perTerm.get(term) ?? { weight: 0, kept: 0, skipped: 0 };
+    for (const term of tokenize(eventTerms(e, ids))) {
+      const cur = perTerm.get(term) ?? { weight: 0, kept: 0, skipped: 0, rated: 0 };
       cur.weight += decayHalfLife(s, nowMs - e.ts);
-      if (s > 0) cur.kept += 1;
+      if (e.kind === "rate") cur.rated += 1;
+      else if (s > 0) cur.kept += 1;
       else cur.skipped += 1;
       perTerm.set(term, cur);
     }
   }
+  return perTerm;
+}
+
+/**
+ * `<term> +1.5 (2 kept)` fragments, ", "-joined, max 3. Fragment kinds:
+ * kept / skipped / rated. No signal history → "no signal yet".
+ */
+export function whyReceipt(
+  story: Story,
+  events: LedgerEvent[],
+  nowMs: number,
+  stories: Story[] = [],
+): string {
+  // Fragments come from the ledger events backing the story's terms.
+  const perTerm = termTallies(events, nowMs, byStoryId(stories));
   const storyTerms = new Set(tokenize(`${story.title} ${story.text ?? ""}`));
   let max = 0;
   const mine = [...perTerm].filter(([t]) => storyTerms.has(t));
@@ -125,8 +164,13 @@ export function whyReceipt(story: Story, events: LedgerEvent[], nowMs: number): 
     .map(([term, v]) => ({
       term,
       weight: v.weight * scale,
-      count: v.kept + v.skipped,
-      kind: v.kept >= v.skipped ? "kept" : "skipped",
+      count: v.kept + v.skipped + v.rated,
+      kind:
+        v.rated > 0 && v.rated >= v.kept + v.skipped
+          ? "rated"
+          : v.kept >= v.skipped
+            ? "kept"
+            : "skipped",
     }))
     .filter((f) => Math.abs(f.weight) >= 0.05)
     .sort((a, b) => {
@@ -148,9 +192,10 @@ export function whyReceipt(story: Story, events: LedgerEvent[], nowMs: number): 
 export type RankedStory = { story: Story; score: number; receipt: string };
 
 /**
- * Rank the queue. Cold start (fewer than 10 sentiment events) → chronological
- * newest first, receipts read "no signal yet". Otherwise score = term + interest,
- * ties break on added_at DESC.
+ * Rank the queue. Cold start (fewer than 5 sentiment events) → chronological
+ * newest first, receipts read "no signal yet". Rate events contribute the
+ * rated story's terms with the rating's polarity. Otherwise
+ * score = term + interest, ties break on added_at DESC.
  */
 export function rankQueue(
   stories: Story[],
@@ -164,12 +209,12 @@ export function rankQueue(
       .sort((a, b) => b.addedAt - a.addedAt)
       .map((story) => ({ story, score: 0, receipt: "no signal yet" }));
   }
-  const weights = termWeights(events, nowMs);
+  const weights = termWeights(events, nowMs, stories);
   const interest = interestBySource(sources);
   return stories
     .map((story) => {
       const s = termScore(story, weights) + (interest.get(story.source ?? "") ?? 0);
-      return { story, score: s, receipt: whyReceipt(story, events, nowMs) };
+      return { story, score: s, receipt: whyReceipt(story, events, nowMs, stories) };
     })
     .sort((a, b) => b.score - a.score || b.story.addedAt - a.story.addedAt);
 }

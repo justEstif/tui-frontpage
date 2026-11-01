@@ -48,7 +48,7 @@ function source(url: string, kept: number, skipped: number): Source {
 }
 
 describe("cold start", () => {
-  test("fewer than 10 sentiment events is cold", () => {
+  test("fewer than 5 sentiment events is cold", () => {
     expect(coldStart([ev("keep", "x"), ev("capture", "y"), ev("read", "1")])).toBe(true);
     expect(coldStart(warmEvents())).toBe(false);
   });
@@ -64,7 +64,7 @@ describe("cold start", () => {
   });
 
   test("cold start notice counts down", () => {
-    expect(coldStartNotice([ev("keep", "x")])).toBe("9 ratings until ranking");
+    expect(coldStartNotice([ev("keep", "x")])).toBe("4 ratings until ranking");
     expect(coldStartNotice(warmEvents())).toBeNull();
   });
 });
@@ -200,5 +200,39 @@ describe("rankQueue", () => {
     expect(ranked.map((r) => r.story.id)).toContain("rust-old");
     expect(ranked[ranked.length - 1].story.id).toBe("plain-old");
     expect(ranked[0].receipt).not.toBe("no signal yet");
+  });
+});
+
+describe("rate events carry the rated story's terms", () => {
+  test("exactly 5 mixed ratings: order differs from chronological, receipt has real weights", () => {
+    const stories = [
+      makeStory({ id: "rust", title: "rust compiler news", addedAt: 100 }),
+      makeStory({ id: "crypto", title: "crypto coin rally", addedAt: 90 }),
+      makeStory({ id: "plain", title: "nothing special here", addedAt: 80 }),
+      makeStory({ id: "rust2", title: "rust cargo tips", addedAt: 70 }),
+    ];
+    const events = [
+      ev("rate", "2", 0, "rust"),
+      ev("rate", "1", 0, "rust2"),
+      ev("rate", "-2", 0, "crypto"),
+      ev("rate", "1", 0, "rust"),
+      ev("rate", "-1", 0, "crypto"),
+    ];
+    const ranked = rankQueue(stories, events, [], clock);
+    // Chronological (newest first) would be rust, crypto, plain, rust2.
+    expect(ranked.map((r) => r.story.id)).not.toEqual(["rust", "crypto", "plain", "rust2"]);
+    expect(ranked[0].story.id).toMatch(/^rust/);
+    expect(ranked[0].receipt).not.toBe("no signal yet");
+    expect(ranked[0].receipt).toMatch(/^rust \+\d+\.\d+ \(\d+ rated\), /);
+    // Negative ratings push the rated story's terms down.
+    const crypto = ranked.find((r) => r.story.id === "crypto");
+    expect(crypto?.receipt).toContain("crypto -");
+    expect(coldStart(events)).toBe(false);
+  });
+
+  test("termWeights resolves rate events via storyId", () => {
+    const stories = [makeStory({ id: "a", title: "kubernetes pods" })];
+    const w = termWeights([ev("rate", "2", 0, "a")], NOW, stories);
+    expect((w.get("kubernetes") ?? 0) > 0).toBe(true);
   });
 });

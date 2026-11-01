@@ -17,7 +17,7 @@ test("app boots into onboarding with 12 seeded demo stories and a status line", 
     writeFileSync("/tmp/tui-render.txt", frame); // proof dump: rendered screen as text
     expect(frame).toContain("rate 5 more stories to teach frontpage");
     expect(frame).toContain("daemon down"); // temp state dir: no daemon
-    expect(frame).toContain("10 ratings until ranking"); // cold start
+    expect(frame).toContain("5 ratings until ranking"); // cold start
   } finally {
     setup.renderer.destroy();
   }

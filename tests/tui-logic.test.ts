@@ -197,9 +197,7 @@ describe("controller over the store", () => {
   test("status line: cold notice counts down, daemon down on an empty state dir", async () => {
     const { c } = make();
     await c.boot();
-    expect(c.getState().coldNotice).toBe(
-      `${10 - 0} ratings until ranking` /* no user events yet */,
-    );
+    expect(c.getState().coldNotice).toBe(`${5 - 0} ratings until ranking` /* no user events yet */);
     expect(c.getState().daemon).toBe("daemon down");
   });
 });
