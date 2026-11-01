@@ -4,7 +4,7 @@ import type { Scheduler } from "../domain/ports";
 import { openStore } from "./sqlite-store";
 import { feedFetcher } from "./feed-fetcher";
 import { extractor } from "./extractor";
-import { appendFileSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { join } from "node:path";
 
@@ -58,6 +58,7 @@ export function claimPidfile(): void {
   if (pid !== null && pidAlive(pid)) {
     throw new Error(`daemon already running (pid ${pid})`);
   }
+  mkdirSync(stateDir(), { recursive: true });
   writeFileSync(pidPath(), String(process.pid)); // stale/missing → claim
 }
 
@@ -72,10 +73,12 @@ export const scheduler: Scheduler = {
     log(`daemon started (pid ${process.pid})`);
     let stopping = false;
     let stopNow: () => void = () => {};
+    let clearSleep: () => void = () => {};
     const stopped = new Promise<void>((resolve) => (stopNow = resolve));
     const stop = () => {
       stopping = true;
       stopNow();
+      clearSleep();
     };
     process.on("SIGTERM", stop);
     process.on("SIGINT", stop);
@@ -88,7 +91,10 @@ export const scheduler: Scheduler = {
     };
     await tick();
     while (!stopping) {
-      const sleep = new Promise<void>((r) => setTimeout(r, TICK_MS));
+      const sleep = new Promise<void>((r) => {
+        const id = setTimeout(r, TICK_MS);
+        clearSleep = () => clearTimeout(id);
+      });
       await Promise.race([stopped, sleep]);
       if (stopping) break;
       await tick();
@@ -178,7 +184,7 @@ export async function daemonMain(args: string[]): Promise<void> {
     return;
   }
   if (!args.includes("--child")) {
-    // Detached spawn; the child writes its own pidfile.
+    // Detached spawn; the child writes its own pidfile. (falls through below)
     const child = spawn(process.execPath, [import.meta.path, "--child"], {
       detached: true,
       stdio: "ignore",
@@ -188,6 +194,7 @@ export async function daemonMain(args: string[]): Promise<void> {
     return;
   }
   await scheduler.run(pollOnce);
+  process.exit(0); // SIGTERM path: clear timers alone may not end the bun process
 }
 
 if (isMain()) {
