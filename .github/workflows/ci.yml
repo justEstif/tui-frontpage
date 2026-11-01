@@ -8,7 +8,7 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -43,10 +43,12 @@ jobs:
             libc: ""
             native: "@opentui/core-darwin-x64"
             asset: frontpage-darwin-x64
+            runner: macos-13
           - target: bun-darwin-arm64
             libc: ""
             native: "@opentui/core-darwin-arm64"
             asset: frontpage-darwin-arm64
+            runner: macos-14
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
