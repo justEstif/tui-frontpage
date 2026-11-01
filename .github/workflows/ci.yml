@@ -56,7 +56,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun add ${{ matrix.native }}
       - run: >
-          bun build --compile src/tui/main.ts
+          bun build --compile index.tsx
           --outfile ${{ matrix.asset }}
           --target ${{ matrix.target }}
           ${{ matrix.libc && format('--define process.env.OPENTUI_LIBC=\"{0}\"', matrix.libc) || '' }}
