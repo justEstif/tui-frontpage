@@ -1,6 +1,6 @@
 {
   "name": "tui-frontpage",
-  "module": "src/tui/main.ts",
+  "module": "index.tsx",
   "type": "module",
   "private": true,
   "scripts": {
