@@ -56,7 +56,11 @@ jobs:
         with:
           bun-version: "1.4.4"
       - run: bun install --frozen-lockfile
-      - run: bun add ${{ matrix.native }}
+      - run: |
+          PKG="${{ matrix.native }}"
+          V=$(npm view @opentui/core version)
+          mkdir -p "node_modules/$PKG"
+          curl -fsSL "https://registry.npmjs.org/$PKG/-/${PKG#@opentui/}-$V.tgz" | tar xz -C "node_modules/$PKG" --strip-components=1
       - run: >
           bun build --compile index.tsx
           --outfile ${{ matrix.asset }}
