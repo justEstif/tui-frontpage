@@ -1,20 +1,29 @@
 {
   "name": "tui-frontpage",
-  "module": "index.ts",
+  "module": "src/tui/main.ts",
   "type": "module",
   "private": true,
   "scripts": {
-    "typecheck": "bun check"
+    "typecheck": "bun check",
+    "test": "bun test",
+    "lint": "oxlint",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "check": "bun test && oxlint && oxfmt --check",
+    "dev": "bun src/tui/main.ts",
+    "daemon": "bun src/adapters/scheduler.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "oxlint": "^1.90.0",
+    "oxfmt": "^0.17.0"
   },
   "peerDependencies": {
     "typescript": "^7"
   },
   "dependencies": {
     "@opentui/core": "^0.8.1",
-    "@opentui/core-linux-x64-musl": "^0.8.1",
+    "@opentui/core-linux-x64": "^0.8.1",
     "@opentui/react": "^0.8.1",
     "defuddle": "^0.19.6",
     "linkedom": "^0.18.14",

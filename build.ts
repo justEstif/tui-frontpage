@@ -7,4 +7,4 @@ await Bun.build({
   define: {
     "process.env.OPENTUI_LIBC": JSON.stringify("musl"),
   },
-})
+});

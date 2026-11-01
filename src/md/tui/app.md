@@ -27,19 +27,19 @@ the rail takes the full width and the reader replaces it (no split).
 
 ## Keys
 
-| Key | Action |
-| --- | --- |
-| `j` / `k` | move selection down / up |
-| `enter` | open story in reader |
-| `x` | skip (dismiss + ledger `skip`) |
-| `S` | save for later (`saved = 1` + ledger `keep`) |
-| `m` | mark read (ledger `read` with elapsed read_ms) |
-| `f` | rate forward: cycle +1 → +2 → off |
-| `h` | rate against: cycle -1 → -2 → off |
-| `u` | undo last action on the selected story (restores state, appends compensating event — the ledger stays append-only) |
-| `w` | show full why receipt for the selection (expanded panel with all fragments and counts) |
-| `c` | capture input |
-| `q` | close reader, or quit from queue |
+| Key       | Action                                                                                                             |
+| --------- | ------------------------------------------------------------------------------------------------------------------ |
+| `j` / `k` | move selection down / up                                                                                           |
+| `enter`   | open story in reader                                                                                               |
+| `x`       | skip (dismiss + ledger `skip`)                                                                                     |
+| `S`       | save for later (`saved = 1` + ledger `keep`)                                                                       |
+| `m`       | mark read (ledger `read` with elapsed read_ms)                                                                     |
+| `f`       | rate forward: cycle +1 → +2 → off                                                                                  |
+| `h`       | rate against: cycle -1 → -2 → off                                                                                  |
+| `u`       | undo last action on the selected story (restores state, appends compensating event — the ledger stays append-only) |
+| `w`       | show full why receipt for the selection (expanded panel with all fragments and counts)                             |
+| `c`       | capture input                                                                                                      |
+| `q`       | close reader, or quit from queue                                                                                   |
 
 Every preference key updates the queue order immediately (ranker recompute,
 no debounce) and shows the why-receipt on the moved row.

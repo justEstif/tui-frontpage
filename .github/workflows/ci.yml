@@ -1,0 +1,67 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - run: bun install --frozen-lockfile
+      - run: bun test
+      - run: bunx oxlint
+      - run: bunx oxfmt --check
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: check
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          - target: bun-linux-x64
+            libc: glibc
+            native: "@opentui/core-linux-x64"
+            asset: frontpage-linux-x64
+          - target: bun-linux-arm64
+            libc: glibc
+            native: "@opentui/core-linux-arm64"
+            asset: frontpage-linux-arm64
+          - target: bun-linux-x64-musl
+            libc: musl
+            native: "@opentui/core-linux-x64-musl"
+            asset: frontpage-linux-x64-musl
+          - target: bun-darwin-x64
+            libc: ""
+            native: "@opentui/core-darwin-x64"
+            asset: frontpage-darwin-x64
+          - target: bun-darwin-arm64
+            libc: ""
+            native: "@opentui/core-darwin-arm64"
+            asset: frontpage-darwin-arm64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - run: bun install --frozen-lockfile
+      - run: bun add ${{ matrix.native }}
+      - run: >
+          bun build --compile src/tui/main.ts
+          --outfile ${{ matrix.asset }}
+          --target ${{ matrix.target }}
+          ${{ matrix.libc && format('--define process.env.OPENTUI_LIBC=\"{0}\"', matrix.libc) || '' }}
+        shell: bash
+      - run: ./${{ matrix.asset }} --version || true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.asset }}

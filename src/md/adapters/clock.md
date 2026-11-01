@@ -3,7 +3,7 @@
 Implements `Clock` (`src/md/ports.md`).
 
 - `src/adapters/clock.ts` exports `systemClock: Clock` (`now() =>
-  Date.now()`).
+Date.now()`).
 - Every ranker/store/scheduler function receives its clock as a parameter;
   tests pass a fake (`tests/fakes.ts` exports `fakeClock(startMs)` with a
   `set(ms)` mutator).

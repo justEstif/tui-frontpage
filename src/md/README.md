@@ -30,19 +30,19 @@ resolution picks the musl native package.
 
 ## File Index
 
-| File | Intent |
-| --- | --- |
-| `src/md/README.md` | This overview and the file index. |
-| `src/md/spike.md` | Spike record: versions, compile command, defuddle/OpentUI gotchas. |
-| `src/md/ports.md` | Hexagon ports: Store, FeedFetcher, Extractor, Clock, Scheduler signatures. Domain imports only these. |
-| `src/md/data/store.md` | Database layout: tables, WAL, path, pidfile, shared access, poll ownership. |
-| `src/md/domain/ranker.md` | Ranking semantics: term/interest weights, events in, why-receipt strings, cold-start rule. |
-| `src/md/adapters/sqlite-store.md` | bun:sqlite implementation of Store. |
-| `src/md/adapters/feed-fetcher.md` | RSS/Atom fetching over `fetch`, robots.txt respect. |
-| `src/md/adapters/extractor.md` | defuddle + linkedom extraction to markdown. |
-| `src/md/adapters/clock.md` | Time port implementation (injectable for tests). |
-| `src/md/adapters/scheduler.md` | `frontpage d` daemon: pidfile, interval polling. |
-| `src/md/tui/app.md` | Screens, keys, rail/reader layout, onboarding, demo seed. |
+| File                              | Intent                                                                                                |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `src/md/README.md`                | This overview and the file index.                                                                     |
+| `src/md/spike.md`                 | Spike record: versions, compile command, defuddle/OpentUI gotchas.                                    |
+| `src/md/ports.md`                 | Hexagon ports: Store, FeedFetcher, Extractor, Clock, Scheduler signatures. Domain imports only these. |
+| `src/md/data/store.md`            | Database layout: tables, WAL, path, pidfile, shared access, poll ownership.                           |
+| `src/md/domain/ranker.md`         | Ranking semantics: term/interest weights, events in, why-receipt strings, cold-start rule.            |
+| `src/md/adapters/sqlite-store.md` | bun:sqlite implementation of Store.                                                                   |
+| `src/md/adapters/feed-fetcher.md` | RSS/Atom fetching over `fetch`, robots.txt respect.                                                   |
+| `src/md/adapters/extractor.md`    | defuddle + linkedom extraction to markdown.                                                           |
+| `src/md/adapters/clock.md`        | Time port implementation (injectable for tests).                                                      |
+| `src/md/adapters/scheduler.md`    | `frontpage d` daemon: pidfile, interval polling.                                                      |
+| `src/md/tui/app.md`               | Screens, keys, rail/reader layout, onboarding, demo seed.                                             |
 
 Tests next to `tests/` are the executable spec for every contract above: if a
 doc and a test disagree, the test wins and the doc gets fixed.

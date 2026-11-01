@@ -87,4 +87,4 @@ export interface Scheduler {
   boundary (`FeedFetcher`, `Extractor`). Domain code never try/catches them.
 - Domain functions take `Store` and `Clock` as parameters; no module-level
   singletons, so tests inject fakes.
-- The TUI may import ports *and* adapters; the domain may not.
+- The TUI may import ports _and_ adapters; the domain may not.
