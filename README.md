@@ -25,18 +25,18 @@ Without the daemon, the TUI polls feeds itself while open. With it, the daemon o
 
 ### Keys
 
-| Key | In queue | In reader |
-| --- | --- | --- |
-| `j` / `k` | move | scroll |
-| `enter` | open story | — |
-| `x` | dismiss | — |
-| `S` | save | — |
-| `m` / `f` | more / less like this | same |
-| `h` | — | mark sentence |
-| `u` | undo last action | same |
-| `w` | why this ranking | full receipt |
-| `c` | capture a URL | — |
-| `q` | quit | back to queue |
+| Key       | In queue              | In reader     |
+| --------- | --------------------- | ------------- |
+| `j` / `k` | move                  | scroll        |
+| `enter`   | open story            | —             |
+| `x`       | dismiss               | —             |
+| `S`       | save                  | —             |
+| `m` / `f` | more / less like this | same          |
+| `h`       | —                     | mark sentence |
+| `u`       | undo last action      | same          |
+| `w`       | why this ranking      | full receipt  |
+| `c`       | capture a URL         | —             |
+| `q`       | quit                  | back to queue |
 
 ## Privacy
 
