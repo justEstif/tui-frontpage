@@ -118,11 +118,11 @@ function storyMethods(db: Database): Pick<Store, "stories" | "story" | "addStory
           s.title,
           s.source ?? null,
           s.addedAt,
-          s.readMs,
-          s.text,
-          s.topic,
-          s.saved ? 1 : 0,
-          s.dismissed ? 1 : 0,
+          s.readMs ?? 0,
+          s.text ?? null,
+          s.topic ?? null,
+          (s.saved ?? false) ? 1 : 0,
+          (s.dismissed ?? false) ? 1 : 0,
         ],
       );
       return storyFromRow(byId.get(id) as StoryRow);

@@ -7,6 +7,12 @@ import { allowed, USER_AGENT } from "./robots";
 
 const MAX_ITEMS = 50;
 
+/** linkedom parses <link> as a void HTML element, losing RSS/Atom link text.
+ *  Rename to <feedlink> (non-void) before parsing. */
+function deVoidLinks(xml: string): string {
+  return xml.replace(/<link(\s|>|\/)/gi, "<feedlink$1").replace(/<\/link>/gi, "</feedlink>");
+}
+
 async function get(url: string): Promise<Response> {
   return fetch(url, {
     headers: { "User-Agent": USER_AGENT },
@@ -28,7 +34,8 @@ function elText(el: Element | null | undefined): string {
 }
 
 function itemOf(el: Element, feedUrl: string): Item | null {
-  const url = absolute(feedUrl, elText(el.querySelector("link")) || el.getAttribute("href"));
+  const link = elText(el.querySelector("feedlink")) || el.getAttribute("href");
+  const url = absolute(feedUrl, link);
   if (!url) return null;
   return { url, title: elText(el.querySelector("title")) || url };
 }
@@ -48,7 +55,7 @@ function parseFeed(doc: Document, feedUrl: string): { title: string; items: Item
 
 function atomItemOf(entry: Element, feedUrl: string): Item | null {
   let href: string | null = null;
-  for (const link of entry.querySelectorAll("link")) {
+  for (const link of entry.querySelectorAll("feedlink")) {
     const rel = link.getAttribute("rel");
     if (rel === "alternate") {
       href = link.getAttribute("href");
@@ -71,7 +78,7 @@ export const feedFetcher: FeedFetcher = {
       const res = await get(feedUrl);
       if (!res.ok) return { ok: false as const, error: `HTTP ${res.status}` };
       const body = await res.text();
-      const doc = parseHTML(body).document;
+      const doc = parseHTML(deVoidLinks(body)).document;
       const { title, items } = parseFeed(doc, feedUrl);
       if (items.length === 0 && title === feedUrl) {
         return { ok: false as const, error: "unparseable feed body" };

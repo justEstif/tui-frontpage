@@ -33,12 +33,12 @@ export async function allowed(origin: string, path: string): Promise<boolean> {
       if (res.status === 404 || res.status === 410) {
         paths = null;
       } else if (!res.ok) {
-        paths = ["*"]; // conservative: disallow everything
+        paths = ["/"]; // conservative: disallow everything
       } else {
         paths = parseRobots(await res.text());
       }
     } catch {
-      paths = ["*"]; // network failure on robots: be conservative
+      paths = ["/"]; // network failure on robots: be conservative
     }
     entry = { paths, fetchedAt: now };
     cache.set(origin, entry);

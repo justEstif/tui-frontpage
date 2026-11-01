@@ -71,8 +71,11 @@ export const scheduler: Scheduler = {
     claimPidfile();
     log(`daemon started (pid ${process.pid})`);
     let stopping = false;
+    let stopNow: () => void = () => {};
+    const stopped = new Promise<void>((resolve) => (stopNow = resolve));
     const stop = () => {
       stopping = true;
+      stopNow();
     };
     process.on("SIGTERM", stop);
     process.on("SIGINT", stop);
@@ -85,7 +88,8 @@ export const scheduler: Scheduler = {
     };
     await tick();
     while (!stopping) {
-      await new Promise<void>((r) => setTimeout(r, TICK_MS));
+      const sleep = new Promise<void>((r) => setTimeout(r, TICK_MS));
+      await Promise.race([stopped, sleep]);
       if (stopping) break;
       await tick();
     }
@@ -102,31 +106,37 @@ export const scheduler: Scheduler = {
 
 // --- Poll implementation: the injected poll() body for the real daemon. ---
 
-export async function pollOnce(): Promise<void> {
-  const store = openStore();
+async function pollSource(
+  store: ReturnType<typeof openStore>,
+  src: { url: string; lastPollMs: number; pollHours: number },
+): Promise<void> {
+  const result = await feedFetcher.fetchFeed(src.url);
+  if (!result.ok) {
+    log(`feed ${src.url}: ${result.error}`);
+    return;
+  }
+  const known = new Set((await store.stories()).map((s) => s.url));
+  for (const item of result.items) {
+    if (known.has(item.url)) continue;
+    await store.addStory({
+      url: item.url,
+      title: item.title,
+      source: src.url,
+      addedAt: Date.now(),
+      readMs: 0,
+      text: null,
+      topic: null,
+      saved: false,
+      dismissed: false,
+    });
+  }
+}
+
+export async function pollOnce(store = openStore()): Promise<void> {
   const now = Date.now();
   for (const src of await store.sources()) {
     if (now - src.lastPollMs < src.pollHours * 3600_000) continue;
-    const result = await feedFetcher.fetchFeed(src.url);
-    if (result.ok) {
-      const known = new Set((await store.stories()).map((s) => s.url));
-      for (const item of result.items) {
-        if (known.has(item.url)) continue;
-        await store.addStory({
-          url: item.url,
-          title: item.title,
-          source: src.url,
-          addedAt: Date.now(),
-          readMs: 0,
-          text: null,
-          topic: null,
-          saved: false,
-          dismissed: false,
-        });
-      }
-    } else {
-      log(`feed ${src.url}: ${result.error}`);
-    }
+    await pollSource(store, src);
     await store.updateSource(src.url, { lastPollMs: Date.now() });
   }
   // Extract up to 5 stories that still have no text.

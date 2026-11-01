@@ -113,6 +113,7 @@ export const extractor: Extractor = {
       if (!res.ok) return { ok: false as const, error: `HTTP ${res.status}` };
       const html = await res.text();
       const doc = parseHTML(html).document;
+      doc.URL = url; // defuddle reads document.URL for site metadata
       const result = new Defuddle(doc, url).parse() as { title?: string; content?: string };
       const contentHtml = result.content ?? "";
       const doc2 = parseHTML(`<body>${contentHtml}</body>`).document;
